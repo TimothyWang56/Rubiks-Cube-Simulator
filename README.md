@@ -5,8 +5,6 @@ I did this project to get an introduction to the PyGame library, as well as appl
 
 You run the Cube.py file to start the simulator. The cube is controlled through keyboard inputs as follows (and it follows conventional Rubik's Cube notation).
 
-Controls:
-------------------------------------------------------------------
 Turns:
 ----------
 "r"           -> turn the right face clockwise 90 degrees
