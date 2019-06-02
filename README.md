@@ -7,6 +7,8 @@ You run the Cube.py file to start the simulator. The cube is controlled through 
 
 Controls:
 ------------------------------------------------------------------
+Turns:
+----------
 "r"           -> turn the right face clockwise 90 degrees
 
 "shift" + "r" -> turn the right face counter-clockwise 90 degrees
@@ -30,6 +32,9 @@ Controls:
 "b"           -> turn the back face clockwise 90 degrees
 
 "shift" + "b" -> turn the back face counter-clockwise 90 degrees
+
+Rotations:
+------------
 
 "→"           -> rotate the cube clockwise about the y-axis
 
