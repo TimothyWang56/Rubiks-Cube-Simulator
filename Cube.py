@@ -1,171 +1,144 @@
-import math
-from Cubie import Cubie
 import pygame
-from pygame.locals import DOUBLEBUF, OPENGL
 from OpenGL.GL import (glBegin, GL_QUADS, glColor3fv, glVertex3fv,
                        GL_COLOR_BUFFER_BIT, glEnd, glClear,
-                       GL_DEPTH_BUFFER_BIT, glTranslate, glRotate,
-                       glEnable, GL_DEPTH_TEST)
-from OpenGL.GLU import gluPerspective
-
-side_length = 4
-positions = [i for i in range(-1, 2)]
-cubies = [Cubie(x, y, z, side_length) for x in positions for y in positions
-          for z in positions]
-
-for cubie in cubies:
-    # the following if statements sets appropriate
-    # surfaces to their respective colors
-    if cubie.position[0] == 1:
-        cubie.surfaces[0][1] = "blue"
-    elif cubie.position[0] == -1:
-        cubie.surfaces[1][1] = "green"
-
-    if cubie.position[1] == 1:
-        cubie.surfaces[2][1] = "white"
-    elif cubie.position[1] == -1:
-        cubie.surfaces[3][1] = "yellow"
-
-    if cubie.position[2] == 1:
-        cubie.surfaces[4][1] = "red"
-    elif cubie.position[2] == -1:
-        cubie.surfaces[5][1] = "orange"
-
-edges = [
-    (0, 1), (0, 2), (0, 4), (1, 3),
-    (1, 5), (2, 3), (2, 6), (3, 7),
-    (4, 5), (4, 6), (5, 7), (6, 7)
-]
-
-# dictionary used for colors
-colors = {
-    "white": (1, 1, 1),
-    "yellow": (1, 1, 0),
-    "blue": (0, 0, 1),
-    "green": (0, 1, 0),
-    "red": (1, 0, 0),
-    "orange": (1, 0.5, 0),
-    "black": (0, 0, 0),
-}
-
-turn_radians = {
-    "CW": -math.pi/10,
-    "CCW": math.pi/10
-}
+                       GL_DEPTH_BUFFER_BIT)
+from cube_properties import Color, Face, Radians
+import math
+import random
 
 
-# function to draw the entire cube
-def Cube():
-    glBegin(GL_QUADS)
-    for cubie in cubies:
-        vertices = cubie.vertices
-        for surface, color in cubie.surfaces:
-            glColor3fv(colors[color])
-            for vertex in surface:
-                glVertex3fv(vertices[vertex])
-    glEnd()
-    # glBegin(GL_LINES)
-    # glColor3fv(colors["white"])
-    # for cubie in cubies:
-    #     vertices = cubie.vertices
-    #     for edge in edges:
-    #         for vertex in edge:
-    #             glVertex3fv(vertices[vertex])
-    # glEnd()
+# class that represents a single cubie of a Rubik's Cube (there are 27 in
+# total in a 3x3x3)
+class Cubie:
+    def __init__(self, x, y, z, side_length):
+        self.position = [x, y, z]
+        self.vertices = self.generate_vertices(x, y, z, side_length)
+        self.surfaces = [
+            [(4, 6, 7, 5), Color.black],
+            [(0, 1, 3, 2), Color.black],
+            [(2, 3, 7, 6), Color.black],
+            [(0, 4, 5, 1), Color.black],
+            [(1, 5, 7, 3), Color.black],
+            [(0, 4, 6, 2), Color.black]
+        ]
+
+    def generate_vertices(self, x, y, z, side_length):
+        scaled_position = (side_length * x,
+                           side_length * y,
+                           side_length * z)
+        offsets = [-side_length/2, side_length/2]
+        vertices = []
+        for i in offsets:
+            for j in offsets:
+                for k in offsets:
+                    vertex = (scaled_position[0] + i,
+                              scaled_position[1] + j,
+                              scaled_position[2] + k)
+                    vertices.append(vertex)
+        return vertices
+
+    def rotate(self, radians, axis):
+        old_x = self.position[0]
+        old_y = self.position[1]
+        old_z = self.position[2]
+        new_vertices = []
+        if axis == "x":
+            self.position = [
+                self.position[0],
+                old_y * math.cos(radians) - old_z * math.sin(radians),
+                old_y * math.sin(radians) + old_z * math.cos(radians)
+            ]
+            for x, y, z in self.vertices:
+                new_y = (y * math.cos(radians)) - (z * math.sin(radians))
+                new_z = (y * math.sin(radians)) + (z * math.cos(radians))
+                new_vertices.append((x, new_y, new_z))
+            self.vertices = new_vertices
+        elif axis == "y":
+            self.position = [
+                old_x * math.cos(radians) - old_z * math.sin(radians),
+                self.position[1],
+                old_x * math.sin(radians) + old_z * math.cos(radians)
+            ]
+            for x, y, z in self.vertices:
+                new_x = (x * math.cos(radians)) - (z * math.sin(radians))
+                new_z = (x * math.sin(radians)) + (z * math.cos(radians))
+                new_vertices.append((new_x, y, new_z))
+            self.vertices = new_vertices
+        elif axis == "z":
+            self.position = [
+                old_x * math.cos(radians) - old_y * math.sin(radians),
+                old_x * math.sin(radians) + old_y * math.cos(radians),
+                self.position[2]
+            ]
+            for x, y, z in self.vertices:
+                new_x = (x * math.cos(radians)) - (y * math.sin(radians))
+                new_y = (x * math.sin(radians)) + (y * math.cos(radians))
+                new_vertices.append((new_x, new_y, z))
+            self.vertices = new_vertices
 
 
-# function to re-render the graphics
-def render():
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    Cube()
-    pygame.display.flip()
-    pygame.time.wait(10)
+class Cube():
+    def __init__(self):
+        side_length = 4
+        positions = [i for i in range(-1, 2)]
+        self.cubies = [Cubie(x, y, z, side_length) for x in positions
+                       for y in positions for z in positions]
 
+        for cubie in self.cubies:
+            # the following if statements sets appropriate
+            # surfaces to their respective colors
+            if cubie.position[0] == 1:
+                cubie.surfaces[0][1] = Color.blue
+            elif cubie.position[0] == -1:
+                cubie.surfaces[1][1] = Color.green
 
-def rotate(side, direction):
-    if side == "front" or side == "back":
-        axis = "x"
-        position_dim = 0
-    elif side == "up" or side == "down":
-        axis = "y"
-        position_dim = 1
-    elif side == "left" or side == "right":
-        axis = "z"
-        position_dim = 2
-    if side == "back" or side == "up" or side == "right":
-        layer = 1
-    elif side == "front" or side == "down" or side == "left":
-        layer = -1
-    for _ in range(5):
-        for cubie in cubies:
-            if abs(cubie.position[position_dim] - layer) < 0.001:
-                cubie.rotate(turn_radians[direction], axis)
-        render()
+            if cubie.position[1] == 1:
+                cubie.surfaces[2][1] = Color.white
+            elif cubie.position[1] == -1:
+                cubie.surfaces[3][1] = Color.yellow
 
+            if cubie.position[2] == 1:
+                cubie.surfaces[4][1] = Color.red
+            elif cubie.position[2] == -1:
+                cubie.surfaces[5][1] = Color.orange
 
-# function that performs a full-cube rotation
-def full_rotate(axis, direction):
-    for _ in range(5):
-        for cubie in cubies:
-            cubie.rotate(turn_radians[direction], axis)
-        render()
+    # function to draw the entire cube
+    def construct_cube(self):
+        glBegin(GL_QUADS)
+        for cubie in self.cubies:
+            vertices = cubie.vertices
+            for surface, color in cubie.surfaces:
+                glColor3fv(color)
+                for vertex in surface:
+                    glVertex3fv(vertices[vertex])
+        glEnd()
 
+    # function to re-render the graphics
+    def render(self):
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        self.construct_cube()
+        pygame.display.flip()
+        pygame.time.wait(15)
 
-def main():
-    pygame.init()
-    display = (800, 600)
-    pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
-    pygame.display.set_caption("Rubik's Cube Simulator")
-    gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
-    glTranslate(0, 0, -40)
-    glRotate(45, 0, 1, 0)
-    glRotate(30, 1, 0, 1)
-    glEnable(GL_DEPTH_TEST)
-    render()
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-            if keys[pygame.K_f]:
-                rotate("front", "CW")
-            elif keys[pygame.K_b]:
-                rotate("back", "CCW")
-            elif keys[pygame.K_l]:
-                rotate("left", "CW")
-            elif keys[pygame.K_r]:
-                rotate("right", "CCW")
-            elif keys[pygame.K_u]:
-                rotate("up", "CW")
-            elif keys[pygame.K_d]:
-                rotate("down", "CCW")
-        else:
-            if keys[pygame.K_f]:
-                rotate("front", "CCW")
-            elif keys[pygame.K_b]:
-                rotate("back", "CW")
-            elif keys[pygame.K_l]:
-                rotate("left", "CCW")
-            elif keys[pygame.K_r]:
-                rotate("right", "CW")
-            elif keys[pygame.K_u]:
-                rotate("up", "CCW")
-            elif keys[pygame.K_d]:
-                rotate("down", "CW")
-            elif keys[pygame.K_LEFT]:
-                full_rotate("y", "CW")
-            elif keys[pygame.K_RIGHT]:
-                full_rotate("y", "CCW")
-            elif keys[pygame.K_UP]:
-                full_rotate("x", "CCW")
-            elif keys[pygame.K_DOWN]:
-                full_rotate("x", "CW")
-            elif keys[pygame.K_x]:
-                full_rotate("z", "CCW")
-            elif keys[pygame.K_z]:
-                full_rotate("z", "CW")
+    # function that performs a rotation on a single face
+    def rotate(self, face, radians):
+        for _ in range(5):
+            for cubie in self.cubies:
+                if abs(cubie.position[face.position_dim] - face.layer) < 0.001:
+                    cubie.rotate(radians, face.axis)
+            self.render()
 
+    # function that performs a full-cube rotation
+    def full_rotate(self, axis, radians):
+        for _ in range(5):
+            for cubie in self.cubies:
+                cubie.rotate(radians, axis)
+            self.render()
 
-main()
+    # method that scrambles the cube randomly
+    def scramble(self):
+        faces = [Face.up, Face.down, Face.left, Face.right, Face.back,
+                 Face.front]
+        radians = [Radians.CCW, Radians.CW]
+        for _ in range(20):
+            self.rotate(random.choice(faces), random.choice(radians))
