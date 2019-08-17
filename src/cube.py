@@ -22,6 +22,8 @@ class Cubie:
             [(0, 4, 6, 2), Color.black]
         ]
 
+    # method that generates the vertices given a Cubie's position in 3D space
+    # and the side length
     def generate_vertices(self, x, y, z, side_length):
         scaled_position = (side_length * x,
                            side_length * y,
@@ -37,6 +39,7 @@ class Cubie:
                     vertices.append(vertex)
         return vertices
 
+    # method that rotates the cubie by given radians along a specified axis
     def rotate(self, radians, axis):
         old_x = self.position[0]
         old_y = self.position[1]
@@ -77,10 +80,11 @@ class Cubie:
             self.vertices = new_vertices
 
 
+# class representing a whole Rubik's cube, consisting of 27 cubies
 class Cube():
     def __init__(self):
         side_length = 4
-        positions = [i for i in range(-1, 2)]
+        positions = [-1, 0, 1]
         self.cubies = [Cubie(x, y, z, side_length) for x in positions
                        for y in positions for z in positions]
 
@@ -102,7 +106,7 @@ class Cube():
             elif cubie.position[2] == -1:
                 cubie.surfaces[5][1] = Color.orange
 
-    # function to draw the entire cube
+    # method to draw the entire cube
     def construct_cube(self):
         glBegin(GL_QUADS)
         for cubie in self.cubies:
@@ -113,14 +117,14 @@ class Cube():
                     glVertex3fv(vertices[vertex])
         glEnd()
 
-    # function to re-render the graphics
+    # method to re-render the graphics
     def render(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self.construct_cube()
         pygame.display.flip()
         pygame.time.wait(15)
 
-    # function that performs a rotation on a single face
+    # method that performs a rotation on a single face
     def rotate(self, face, radians):
         for _ in range(5):
             for cubie in self.cubies:
@@ -128,7 +132,7 @@ class Cube():
                     cubie.rotate(radians, face.axis)
             self.render()
 
-    # function that performs a full-cube rotation
+    # method that performs a full-cube rotation
     def full_rotate(self, axis, radians):
         for _ in range(5):
             for cubie in self.cubies:
@@ -140,5 +144,9 @@ class Cube():
         faces = [Face.up, Face.down, Face.left, Face.right, Face.back,
                  Face.front]
         radians = [Radians.CCW, Radians.CW]
-        for _ in range(20):
-            self.rotate(random.choice(faces), random.choice(radians))
+        previous_face = None
+        for _ in range(25):
+            possible_faces = [face for face in faces if face != previous_face]
+            face_to_turn = random.choice(possible_faces)
+            self.rotate(face_to_turn, random.choice(radians))
+            previous_face = face_to_turn
